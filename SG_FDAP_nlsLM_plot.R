@@ -37,6 +37,11 @@ filenames
 #######
 subset_nrow <- 150
 
+create_empty_table <- function(num_rows, num_cols) {
+  frame <- data.frame(matrix(NA, nrow = num_rows, ncol = num_cols))
+  return(frame)
+}
+
 #######
 #Plotting raw data without normalization
 #######
@@ -50,6 +55,7 @@ for (i in filenames){
   x <-x[1:subset_nrow,] #easy subsetting
   nrow_input <- nrow(x) 
   name <- gsub(".txt","",i)
+  print(name)
   dat <- data.frame(matrix(ncol=0,nrow=nrow_input+1)) #depends on subsetting
   dat <- x[6]
   rawdatalist[name] <- dat
@@ -109,27 +115,8 @@ for (i in filenames){
   data_to_fit_1 <- structure(list(x = str_1$time, y=str_1$y), class = "data.frame", row.names = c(NA, -n), .Names = c("x", "y"))
   data_to_fit_1
   
-  #Initial fit using logarithmic data.
-  #init_fit_1 <- nls(y ~ ln_A1 + (-x*t1), log(data_to_fit_1), 
-  #                start = list(ln_A1=max(y), 
-  #                             t1=1))
-  
-  #Print initial coeeficients
-  #coef(init_fit_1)
-  #ln_A1_init <- coef(init_fit_1)[1]
-  #t1_init <- 1/coef(init_fit_1)[2]
-  #print(ln_A1_init)
-  #print(t1_init)
-  
-  #Bi-exponential fit
-  #result_1 <- try(nlsLM(y ~ y0 + A1*exp(-x/t1) + A2*exp(-x/t2), data=data_to_fit_1, 
-  #                      start = list(y0=max(y),
-  #                                   A1=exp(ln_A1_init)/2, 
-  #                                   t1=t1_init*0.9, 
-  #                                   A2=exp(ln_A1_init)/2, 
-  #                                   t2=t1_init*1.1), 
-  #                      control = list(maxiter = 400, nprint = 1, ftol = 1e-9)))
-    
+  #https://stackoverflow.com/questions/33265467/nls-troubles-missing-value-or-an-infinity-produced-when-evaluating-the-model
+  #a way to make different start for each measurement
   result_1 <- try(fit_1 <- nlsLM(y ~ y0 + a1*exp(-x/b1) + a2*exp(-x/b2), data=data_to_fit_1, 
                                  control = list(maxiter = 100),
                                  start=list(y0=max(y),
@@ -154,63 +141,24 @@ for (i in filenames){
     str$y <- str$y/Int0_extrap
     data_to_fit <- structure(list(x = str$time, y=str$y), class = "data.frame", row.names = c(NA, -n-1), .Names = c("x", "y"))
     
-    #data_to_fit$x <- data_to_fit$x+1
-    
-    #Initial fit using logarithmic data.
-    #init_fit <- nls(y ~ ln_A1 + (-x*t1), log(data_to_fit), 
-    #                start = list(ln_A1=max(y), 
-    #                             t1=1))
-    
-    #Print initial coeeficients
-    #coef(init_fit)
-    #ln_A1_init <- coef(init_fit)[1]
-    #t1_init <- 1/coef(init_fit)[2]
-    #print(ln_A1_init)
-    #print(t1_init)
-    
-    #Bi-exponential fit
+    #IMPORTANT - might need to change the initial parameters
     result <- try(fit <- nlsLM(y ~ offset + AF*exp(-(x/tf)) + AS*exp(-(x/ts)), data=data_to_fit, 
-                               #start = list(offset=max(y), AF=exp(ln_A1_init)/2, tf=t1_init*1.1, AS=exp(ln_A1_init)/2, ts=t1_init*0.9), 
-                               start = list(offset=max(y), AF=max(y), tf=100, AS=max(y), ts=1), 
-                               #start = list(offset=0.1, AF=0.4, tf=1000, AS=0.4, ts=300)
-                               control = list(maxiter = 400), 
-                               lower=c(offset=0, AF=0, tf=0, AS=0, ts=0)))
+                               start = list(offset=max(y), AF=max(y), tf=100, AS=max(y), ts=1), #start = list(offset=0.1, AF=0.4, tf=1000, AS=0.4, ts=300)
+                               control = list(maxiter = 100), lower=c(offset=0, AF=0, tf=0, AS=0, ts=0)))
+    
     
     if (class(result) == "try-error") {
       error_counter<-error_counter+1
       print(c("Could not be fitted with biphasic exponential decay:",name))
       
-      #Initial fit using logarithmic data.
-      #init_fit <- nls(y ~ ln_A1 + (-x*t1), log(data_to_fit), 
-      #                start = list(ln_A1=max(y), 
-      #                             t1=1))
-      
-      #Print initial coeeficients
-      #coef(init_fit)
-      #ln_A1_init <- coef(init_fit)[1]
-      #t1_init <- 1/coef(init_fit)[2]
-      #print(ln_A1_init)
-      #print(t1_init)
-      
-      #Mono-exponential fit
       fit_one_phase <- nlsLM(y ~ offset + AS*exp(-(x/ts)), data=data_to_fit, 
-                             #start = list(offset=max(y), AS=exp(ln_A1_init), ts=t1_init), 
-                             start = list(offset=max(y), AF=max(y), tf=100, AS=max(y), ts=1), 
-                             #start = list(offset=0.1, AF=0.4, tf=1000, AS=0.4, ts=300)
-                             control = list(maxiter = 400)) #lower=c(offset=0, AF=0, tf=0, AS=0, ts=0)
-                       #start = list(offset=0.1, AS=0.4, ts=30), 
-            
+                       start = list(offset=0.1, AS=0.4, ts=30), control = list(maxiter = 100), lower=c(offset=0, AS=0, ts=0))
       
-      #str(fit)
-      #summary(fit) #95,161 degrees of freedom is given by the difference between the number of observations in my sample and the number of variables in my model
-      #residuals(fit)
-      #sigma(fit)
-      #deviance(fit) #residual sum of squares 
-      #fit$convInfo$finTol
-      #cor(str$y,predict(fit)
-      #summary(fit_one_phase)
-      #anova(fit, fit_one_phase)
-      #confint.default(fit)
+      
+      summary(fit)
+      summary(fit_one_phase)
+      anova(fit, fit_one_phase)
+      confint.default(fit)
      
       jpeg(paste("jpeg_fits/",paste(paste(name,'one_phase',sep="_"),"jpg",sep="."),sep=""))
       plot(y~x, data = data_to_fit, main =paste(i,sep="_"), xlab = "Time (s)", ylab = "Intensity", ylim=c(0,1))
@@ -223,21 +171,16 @@ for (i in filenames){
       abline(0, 0, col = "blue", lty = 2)  
       dev.off()
       
-      create_empty_table <- function(num_rows, num_cols) {
-        frame <- data.frame(matrix(NA, nrow = num_rows, ncol = num_cols))
-        return(frame)
-      }
-      
-      empty_df <- create_empty_table(9,1)
+      empty_df <- create_empty_table(8,1)
       empty_df[1,] <- coef(fit_one_phase)[1]
       empty_df[4,] <- coef(fit_one_phase)[2]
       empty_df[5,] <- coef(fit_one_phase)[3]
       empty_df[6,] <- coef(fit_one_phase)[1] + coef(fit_one_phase)[2]
       empty_df[7,] <- sigma(fit_one_phase)
-      empty_df[8,] <- fit_one_phase$convInfo$finTol
-      empty_df[9,] <-cor(str$y,predict(fit_one_phase))
+      empty_df[8,] <-cor(str$y,predict(fit_one_phase))
       empty_df
       datalist[name] <-  as.list(empty_df)
+      
       next
     }
     else {
@@ -252,29 +195,17 @@ for (i in filenames){
       abline(0, 0, col = "red", lty = 2)  
       dev.off()
       
+      print(coef(fit))
       coefs <- as.data.frame(coef(fit))
       coefs[nrow(coefs) + 1,] <- coef(fit)[1] + coef(fit)[2] + coef(fit)[4]
       print(coef(fit)[1] + coef(fit)[2] + coef(fit)[4])
       row.names(coefs)[nrow(coefs)] <- "A_total"
+      
       colnames(coefs) <- name
-      
-      str(fit)
-      summary(fit) #degrees of freedom is given by the difference between the number of observations in my sample and the number of variables in my model
-      residuals(fit)
-      sigma(fit)
-      deviance(fit) #residual sum of squares 
-      fit$convInfo$finTol
-      cor(str$y,predict(fit))
-      
-      create_empty_table <- function(num_rows, num_cols) {
-        frame <- data.frame(matrix(NA, nrow = num_rows, ncol = num_cols))
-        return(frame)
-      }
-      empty_df <- create_empty_table(9,1)
+      empty_df <- create_empty_table(8,1)
       empty_df[1:6,] <- as.list(coefs)
       empty_df[7,] <- sigma(fit)
-      empty_df[8,] <- fit$convInfo$finTol
-      empty_df[9,] <-cor(str$y,predict(fit))
+      empty_df[8,] <-cor(str$y,predict(fit))
       datalist[name] <-  as.list(empty_df)
       
       normdat <- data.frame(matrix(ncol=0,nrow=subset_nrow))
@@ -284,6 +215,7 @@ for (i in filenames){
       normdatp <- data.frame(matrix(ncol=0,nrow=subset_nrow))
       normdatp <- data_to_fit[2]
       normdatapoints[name] <- normdatp
+      
     }
   }
 }
@@ -334,7 +266,7 @@ ggplot(long_plot_Int, aes(x = time, y = measured_intensity)) +
 dev.off()
 
 big_data = as.data.frame(do.call(rbind, datalist))
-big_data <- setNames(big_data,c("offset","AF","tf","AS","ts","A_total"))
+big_data <- setNames(big_data,c("offset","AF","tf","AS","ts","A_total","Residual standard error","Correlation coefficient"))
 dfFinal <- big_data #dfFinal <- rbind(big_data, colMeans(na.omit(big_data)))
 #row.names(dfFinal)[nrow(dfFinal)] <- "Mean"
 write.table(dfFinal, "all_fit_coefs.csv", sep = ";",dec = '.', row.names = TRUE, col.names = NA)
@@ -350,7 +282,7 @@ ggplot(long_plot_Int, aes(x = time, y = measured_intensity)) +
   xlab("Time (s)") + 
   ylab("Normalized intensity") +
   scale_x_continuous(breaks=seq(0, subset_nrow, 20)) +
-  scale_y_continuous(limits = c(-0.1,1.4),breaks=seq(-0.1, 1.4, 0.1))
+  scale_y_continuous(limits = c(-0.1,1.1),breaks=seq(-0.1, 1.1, 0.1))
 dev.off()
 
 error_counter_1
