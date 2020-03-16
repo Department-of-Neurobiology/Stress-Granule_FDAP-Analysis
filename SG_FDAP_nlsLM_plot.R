@@ -161,15 +161,24 @@ for (i in filenames){
       confint.default(fit)
      
       jpeg(paste("jpeg_fits/",paste(paste(name,'one_phase',sep="_"),"jpg",sep="."),sep=""))
-      plot(y~x, data = data_to_fit, main =paste(i,sep="_"), xlab = "Time (s)", ylab = "Intensity", ylim=c(0,1))
+      nf <- layout(matrix(c(1,2,3,3), ncol = 2, byrow = TRUE))
+      layout.show(nf)
+      par(cex=0.8, mai=c(0.1,0.1,0.2,0.1)) #make labels and margins smaller
+      par(mar=c(2,2,2,0.5))
+      plot(residuals(fit_one_phase),main="Residuals")
+      abline(0, 0, col = "red", lty = 2) 
+      par(mar=c(2,2,2,1))
+      qqnorm(residuals(fit_one_phase))
+      par(mar=c(2,2,2,1))
+      plot(y~x, data = data_to_fit, main =paste(i,sep="_"), xlab = "Time (s)", ylab = "Intensity", ylim=c(-0.1,1))
       curve(predict(fit_one_phase, data.frame(x)), col = "blue", add = TRUE)
-      dev.off()
+      dev.off()      
       
-      jpeg(paste("jpeg_fits/",paste(paste(name,'one_phase_residuals',sep="_"),"jpg",sep="."),sep=""))
-      predict(fit, data.frame(x))
-      plot(residuals(fit),ylab="Residuals") 
-      abline(0, 0, col = "blue", lty = 2)  
-      dev.off()
+      #jpeg(paste("jpeg_fits/",paste(paste(name,'one_phase_residuals',sep="_"),"jpg",sep="."),sep=""))
+      #predict(fit, data.frame(x))
+      #plot(residuals(fit_one_phase),ylab="Residuals") 
+      #abline(0, 0, col = "blue", lty = 2)  
+      #dev.off()
       
       empty_df <- create_empty_table(8,1)
       empty_df[1,] <- coef(fit_one_phase)[1]
@@ -185,15 +194,29 @@ for (i in filenames){
     }
     else {
       jpeg(paste("jpeg_fits/",paste(paste(name,sep="_"),"jpg",sep="."),sep=""))
+      nf <- layout(matrix(c(1,2,3,3), ncol = 2, byrow = TRUE))
+      layout.show(nf)
+      par(cex=0.8) #make labels and margins smaller - #, mai=c(0.1,0.1,0.2,0.1)
+      par(mar=c(2,2,2,0.5))
+      plot(residuals(fit),main="Residuals")
+      abline(0, 0, col = "red", lty = 2) 
+      par(mar=c(2,2,2,1))
+      qqnorm(residuals(fit))
+      par(mar=c(2,2,2,1))
       plot(y~x, data = data_to_fit, main =paste(i,sep="_"), xlab = "Time (s)", ylab = "Intensity", ylim=c(-0.1,1))
       curve(predict(fit, data.frame(x)), col = "red", add = TRUE)
       dev.off()
       
-      jpeg(paste("jpeg_fits/",paste(paste(name,'residuals',sep="_"),"jpg",sep="."),sep=""))
-      predict(fit, data.frame(x))
-      plot(residuals(fit),ylab="Residuals") 
-      abline(0, 0, col = "red", lty = 2)  
-      dev.off()
+      ##### WIP #####
+      df_chi <- data.frame(data_to_fit$y,predict(fit))
+      df_chi
+      print(chisq.test(df_chi$data_to_fit.y,df_chi$predict.fit., simulate.p.value = TRUE))
+      
+      #jpeg(paste("jpeg_fits/",paste(paste(name,'residuals',sep="_"),"jpg",sep="."),sep=""))
+      #predict(fit, data.frame(x))
+      #plot(residuals(fit),main="Residuals",xlab="Time") 
+      #abline(0, 0, col = "red", lty = 2)  
+      #dev.off()
       
       print(coef(fit))
       coefs <- as.data.frame(coef(fit))
