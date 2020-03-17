@@ -152,7 +152,7 @@ for (i in filenames){
       print(c("Could not be fitted with biphasic exponential decay:",name))
       
       fit_one_phase <- nlsLM(y ~ offset + AS*exp(-(x/ts)), data=data_to_fit, 
-                       start = list(offset=0.1, AS=0.4, ts=30), control = list(maxiter = 100), lower=c(offset=0, AS=0, ts=0))
+                       start = list(offset=max(y), AS=max(y), ts=30), control = list(maxiter = 100), lower=c(offset=0, AS=0, ts=0))
       
       
       summary(fit)
@@ -165,8 +165,8 @@ for (i in filenames){
       layout.show(nf)
       par(cex=0.8, mai=c(0.1,0.1,0.2,0.1)) #make labels and margins smaller
       par(mar=c(2,2,2,0.5))
-      plot(residuals(fit_one_phase),main="Residuals")
-      abline(0, 0, col = "red", lty = 2) 
+      plot(residuals(fit_one_phase),main="Residuals", ylim=c(-0.3,0.3))
+      abline(0, 0, col = "blue", lty = 2) 
       par(mar=c(2,2,2,1))
       qqnorm(residuals(fit_one_phase))
       par(mar=c(2,2,2,1))
@@ -180,7 +180,7 @@ for (i in filenames){
       #abline(0, 0, col = "blue", lty = 2)  
       #dev.off()
       
-      empty_df <- create_empty_table(8,1)
+      empty_df <- create_empty_table(10,1)
       empty_df[1,] <- coef(fit_one_phase)[1]
       empty_df[4,] <- coef(fit_one_phase)[2]
       empty_df[5,] <- coef(fit_one_phase)[3]
@@ -193,15 +193,27 @@ for (i in filenames){
       next
     }
     else {
+      #if the biphasic fit was possible the monophasic fit is made for comparison
+      fit_one_phase_compare <- nlsLM(y ~ offset + AS*exp(-(x/ts)), data=data_to_fit, 
+                             start = list(offset=max(y), AS=max(y), ts=30), control = list(maxiter = 100), lower=c(offset=0, AS=0, ts=0))
+      
+      summary(fit)
+      summary(fit_one_phase_compare)
+      ##### To implement later maybe ####
+      anova(fit, fit_one_phase_compare)
+      confint.default(fit)
+      
       jpeg(paste("jpeg_fits/",paste(paste(name,sep="_"),"jpg",sep="."),sep=""))
       nf <- layout(matrix(c(1,2,3,3), ncol = 2, byrow = TRUE))
       layout.show(nf)
       par(cex=0.8) #make labels and margins smaller - #, mai=c(0.1,0.1,0.2,0.1)
       par(mar=c(2,2,2,0.5))
-      plot(residuals(fit),main="Residuals")
+      plot(residuals(fit),main="Residuals", ylim=c(-0.3,0.3))
       abline(0, 0, col = "red", lty = 2) 
       par(mar=c(2,2,2,1))
-      qqnorm(residuals(fit))
+      #qqnorm(residuals(fit))
+      plot(residuals(fit_one_phase_compare),main="Residuals one-phase", ylim=c(-0.3,0.3))
+      abline(0, 0, col = "blue", lty = 2) 
       par(mar=c(2,2,2,1))
       plot(y~x, data = data_to_fit, main =paste(i,sep="_"), xlab = "Time (s)", ylab = "Intensity", ylim=c(-0.1,1))
       curve(predict(fit, data.frame(x)), col = "red", add = TRUE)
@@ -225,11 +237,14 @@ for (i in filenames){
       row.names(coefs)[nrow(coefs)] <- "A_total"
       
       colnames(coefs) <- name
-      empty_df <- create_empty_table(8,1)
+      empty_df <- create_empty_table(10,1)
       empty_df[1:6,] <- as.list(coefs)
       empty_df[7,] <- sigma(fit)
-      empty_df[8,] <-cor(str$y,predict(fit))
+      empty_df[8,] <- cor(str$y,predict(fit))
+      empty_df[9,] <- sigma(fit_one_phase_compare)
+      empty_df[10,] <- cor(str$y,predict(fit_one_phase_compare))
       datalist[name] <-  as.list(empty_df)
+      
       
       normdat <- data.frame(matrix(ncol=0,nrow=subset_nrow))
       normdat <- as.data.frame(predict(fit))
@@ -289,7 +304,7 @@ ggplot(long_plot_Int, aes(x = time, y = measured_intensity)) +
 dev.off()
 
 big_data = as.data.frame(do.call(rbind, datalist))
-big_data <- setNames(big_data,c("offset","AF","tf","AS","ts","A_total","Residual standard error","Correlation coefficient"))
+big_data <- setNames(big_data,c("offset","AF","tf","AS","ts","A_total","Residual standard error","Correlation coefficient","One-phase residual standard error","One-phase correlation coefficient"))
 dfFinal <- big_data #dfFinal <- rbind(big_data, colMeans(na.omit(big_data)))
 #row.names(dfFinal)[nrow(dfFinal)] <- "Mean"
 write.table(dfFinal, "all_fit_coefs.csv", sep = ";",dec = '.', row.names = TRUE, col.names = NA)
