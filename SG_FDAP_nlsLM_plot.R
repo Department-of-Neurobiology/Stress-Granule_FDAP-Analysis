@@ -180,7 +180,7 @@ for (i in filenames){
       #abline(0, 0, col = "blue", lty = 2)  
       #dev.off()
       
-      empty_df <- create_empty_table(10,1)
+      empty_df <- create_empty_table(12,1)
       empty_df[1,] <- coef(fit_one_phase)[1]
       empty_df[4,] <- coef(fit_one_phase)[2]
       empty_df[5,] <- coef(fit_one_phase)[3]
@@ -237,12 +237,14 @@ for (i in filenames){
       row.names(coefs)[nrow(coefs)] <- "A_total"
       
       colnames(coefs) <- name
-      empty_df <- create_empty_table(10,1)
+      empty_df <- create_empty_table(12,1)
       empty_df[1:6,] <- as.list(coefs)
       empty_df[7,] <- sigma(fit)
       empty_df[8,] <- cor(str$y,predict(fit))
       empty_df[9,] <- sigma(fit_one_phase_compare)
       empty_df[10,] <- cor(str$y,predict(fit_one_phase_compare))
+      empty_df[11,] <- sigma(fit) - sigma(fit_one_phase_compare)
+      empty_df[12,] <- cor(str$y,predict(fit)) - cor(str$y,predict(fit_one_phase_compare))
       datalist[name] <-  as.list(empty_df)
       
       
@@ -304,7 +306,7 @@ ggplot(long_plot_Int, aes(x = time, y = measured_intensity)) +
 dev.off()
 
 big_data = as.data.frame(do.call(rbind, datalist))
-big_data <- setNames(big_data,c("offset","AF","tf","AS","ts","A_total","Residual standard error","Correlation coefficient","One-phase residual standard error","One-phase correlation coefficient"))
+big_data <- setNames(big_data,c("offset","AF","tf","AS","ts","A_total","Residual standard error (RSE)","Correlation coefficient (cor)","One-phase RSE","One-phase cor","RSE difference", "Cor difference"))
 dfFinal <- big_data #dfFinal <- rbind(big_data, colMeans(na.omit(big_data)))
 #row.names(dfFinal)[nrow(dfFinal)] <- "Mean"
 write.table(dfFinal, "all_fit_coefs.csv", sep = ";",dec = '.', row.names = TRUE, col.names = NA)
