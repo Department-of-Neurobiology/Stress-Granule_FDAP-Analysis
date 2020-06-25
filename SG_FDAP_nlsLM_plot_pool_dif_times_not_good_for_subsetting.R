@@ -20,15 +20,12 @@ library(ggplot2)
 library(minpack.lm)
 library(tidyr)
 library(Rmisc)
+library(plyr)
 
 #######
 #Set working directory to the file location
 #######
 setwd(dirname(rstudioapi::getActiveDocumentContext()$path)) 
-
-#GIVE THE CONSTRUCT NAME
-getwd()
-construct_name <- "S253a"
 
 #######
 #Read the txt files in the working directory
@@ -39,7 +36,7 @@ filenames
 #######
 #Additional
 #######
-subset_nrow <- 300
+max_nrow <- 300
 
 create_empty_table <- function(num_rows, num_cols) {
   frame <- data.frame(matrix(NA, nrow = num_rows, ncol = num_cols))
@@ -51,21 +48,30 @@ create_empty_table <- function(num_rows, num_cols) {
 #######
 rawdatalist = list()
 for (i in filenames){
-  #i <- "20200601_D01_C03_HV95.txt" #if working on individual files
+  #i <- "20191023_D4_C02_HV 105_240 sec_ACS.txt" #if working on individual files
   x <- read.table(i, sep = "\t", header = TRUE, fill = TRUE)
-  x <- x[!apply(x == "", 1, all),] #removes the empty row from some problematic files #to also remove NA: data <- data[!apply(is.na(data) | data == "", 1, all),]
+  nrow(x)
   Int0_background <- x[,6][1] #the background intensity is in the first row of the last column
   x[,6] <- x[,6] - Int0_background #substract the background intensity from all the values in the last column
   x <- x[-c(1),] #delete the first row with zero value
-  x <-x[1:subset_nrow,] #easy subsetting
-  nrow_input <- nrow(x) 
+  x <-x[1:nrow(x)-1,]
+  nrow_input <- max_nrow
   name <- gsub(".txt","",i)
   print(name)
-  dat <- data.frame(matrix(ncol=0,nrow=nrow_input+1)) #depends on subsetting
+  dat <- data.frame(matrix(ncol=0,nrow=max_nrow+1)) #depends on subsetting
   dat <- x[6]
+  dat
   rawdatalist[name] <- dat
 }
-raw_data = as.data.frame(do.call(rbind, rawdatalist))
+
+raw_data = data.frame()
+for (i in 1:length(rawdatalist)){
+  raw_data = rbind.fill(raw_data, as.data.frame(t(as.data.frame(rawdatalist[i]))))
+}
+for (i in 1:length(rawdatalist)){
+  row.names(raw_data)[i] <- colnames(as.data.frame(rawdatalist[i]))
+}
+
 write.table(raw_data, "raw_data.csv", sep = ";",dec = '.', row.names = TRUE, col.names = FALSE)
 raw_data_transpose <- as.data.frame(t(as.matrix(raw_data)))
 nrow_plot <- nrow(raw_data_transpose) 
@@ -103,15 +109,16 @@ normdatapoints = list()
 #biphasic exponential decay fit
 #if not fitted - tries monophasic
 #######
+
+#filenames <- "20191023_D4_C02_HV 105_240 sec_ACS.txt"
+
 for (i in filenames){
-  #i <- "20200211_D03_C02_HV65.txt"
   x <- read.table(i, sep = "\t", header = TRUE, fill = TRUE)
-  x <- x[!apply(x == "", 1, all),]
   name <- gsub(".txt","",i)
   print(name)
   Int0_background <- x[,6][1]
   x[,6] <- x[,6] - Int0_background
-  x <-x[1:subset_nrow,] #easy subsetting
+  x <-x[1:nrow(x)-1,]
   time <- 1:nrow(x) -1
   y <- x[,6]
   #colnames(y) <- "y"
@@ -139,11 +146,11 @@ for (i in filenames){
   }
   else {
     Int0_extrap <- coef(fit_1)[1] + coef(fit_1)[2] + coef(fit_1)[4]
-    
-    #print(c("Test activation: ", data_to_fit_1$y[1]/predict(fit_1)[1])) #CHange the formula to also insert
-    
+    #print(c("Test activation: ", data_to_fit_1$y[1]/predict(fit_1)[1])) #Change the formula to also insert
+
     str <- str_1
-    str[nrow(str) + 1,] = c(0,Int0_extrap)
+    rbind(data.frame(time = 0, y = Int0_extrap), str)
+    
     str$y <- str$y/Int0_extrap
     data_to_fit <- structure(list(x = str$time, y=str$y), class = "data.frame", row.names = c(NA, -n-1), .Names = c("x", "y"))
     
@@ -254,25 +261,31 @@ for (i in filenames){
       datalist[name] <-  as.list(empty_df)
       
       
-      normdat <- data.frame(matrix(ncol=0,nrow=subset_nrow))
+      normdat <- data.frame(matrix(ncol=0,nrow=max_nrow))
       normdat <- as.data.frame(predict(fit))
       normdatalist[name] <- normdat
       
-      normdatp <- data.frame(matrix(ncol=0,nrow=subset_nrow))
+      normdatp <- data.frame(matrix(ncol=0,nrow=max_nrow))
+      #data_to_fit[2][,1][nrow(x)]<-0
+      data_to_fit[2]
       normdatp <- data_to_fit[2]
       normdatapoints[name] <- normdatp
-      
     }
   }
 }
 
-norm_data_points = as.data.frame(do.call(rbind, normdatapoints)) 
+#norm_data_points = as.data.frame(do.call(rbind, normdatapoints)) 
+norm_data_points = data.frame()
+for (i in 1:length(normdatapoints)){
+  norm_data_points = rbind.fill(norm_data_points, as.data.frame(t(as.data.frame(normdatapoints[i]))))
+}
+for (i in 1:length(normdatapoints)){
+  row.names(norm_data_points)[i] <- colnames(as.data.frame(normdatapoints[i]))
+}
 write.table(norm_data_points, "norm_data_points.csv", sep = ";",dec = '.', row.names = TRUE, col.names = FALSE)
 norm_data_points_transpose <- as.data.frame(t(as.matrix(norm_data_points)))
-plot_Int_points <- cbind(norm_data_points_transpose, "type"="Int","time"=1:subset_nrow)
-plot_Int_points$time[subset_nrow] <- 0
-#tail(plot_Int_points)
-plot_Int_points$time <- as.numeric(plot_Int_points$time) + 1
+nrow_plot <- nrow(norm_data_points_transpose)
+plot_Int_points <- cbind(norm_data_points_transpose, "type"="Int","time"=1:nrow_plot)
 long_plot_Int_points <- gather(plot_Int_points, cell, measured_intensity, -c(time:type))
 
 plot_final_summary <- summarySE(long_plot_Int_points, measurevar="measured_intensity", groupvars=c("type","time"))
@@ -287,16 +300,24 @@ ggplot(long_plot_Int_points, aes(x = time, y = measured_intensity)) +
   ggtitle("Plot of normalized intensities") +
   xlab("Time (s)") + 
   ylab("Normalized intensity") +
-  scale_x_continuous(breaks=seq(0, subset_nrow, 20))
+  scale_x_continuous(breaks=seq(0, max_nrow, 20))
 
-norm_data = as.data.frame(do.call(rbind, normdatalist)) 
+
+#norm_data = as.data.frame(do.call(rbind, normdatalist)) 
+norm_data = data.frame()
+for (i in 1:length(normdatalist)){
+  norm_data = rbind.fill(norm_data, as.data.frame(t(as.data.frame(normdatalist[i]))))
+}
+for (i in 1:length(normdatalist)){
+  row.names(norm_data)[i] <- colnames(as.data.frame(normdatalist[i]))
+}
+
 write.table(norm_data, "norm_data.csv", sep = ";",dec = '.', row.names = TRUE, col.names = FALSE)
 norm_data_transpose <- as.data.frame(t(as.matrix(norm_data)))
-plot_Int <- cbind(norm_data_transpose, "type"="Int","time"=1:subset_nrow)
-plot_Int$time[subset_nrow] <- 0
-plot_Int$time <- as.numeric(plot_Int$time) + 1
+nrow_plot <- nrow(norm_data_transpose)
+norm_data_transpose
+plot_Int <- cbind(norm_data_transpose, "type"="Int","time"=1:nrow_plot)
 long_plot_Int <- gather(plot_Int, cell, measured_intensity, -c(time:type))
-
 
 
 pdf("norm_data.pdf",  width=14, height=6)
@@ -307,7 +328,7 @@ ggplot(long_plot_Int, aes(x = time, y = measured_intensity)) +
   ggtitle("Plot of fitted normalized intensities and mean +-se by time") +
   xlab("Time (s)") + 
   ylab("Fitted normalized intensity") +
-  scale_x_continuous(breaks=seq(0, subset_nrow, 20)) #+
+  scale_x_continuous(breaks=seq(0, max_nrow, 20)) #+
 #scale_y_continuous(limits = c(-0.1,1.1),breaks=seq(-0.1, 1.1, 0.1))
 dev.off()
 
@@ -327,21 +348,19 @@ ggplot(long_plot_Int, aes(x = time, y = measured_intensity)) +
   ggtitle("Plot of fitted normalized intensities and mean +-se by time") +
   xlab("Time (s)") + 
   ylab("Normalized intensity") +
-  scale_x_continuous(breaks=seq(0, subset_nrow, 20)) +
+  scale_x_continuous(breaks=seq(0, max_nrow, 20)) +
   scale_y_continuous(limits = c(-0.1,1.1),breaks=seq(-0.1, 1.1, 0.1))
 dev.off()
 
 error_counter_1
 error_counter
 
-
-
-###new part for plotting mean curves
-
+getwd()
+construct_name <- "paGFP-G3BP1-S253a_mCherry-IMP1_all"
 long_plot_Int_points$construct <- construct_name
 
 plot_final_summary <- summarySE(long_plot_Int_points, measurevar="measured_intensity", groupvars=c("construct","time"))
-plot_final_summary
+#plot_final_summary
 ### change se to sd for further plotting
 plot_final_summary$CI_lower <- plot_final_summary$measured_intensity + plot_final_summary$se
 plot_final_summary$CI_upper <- plot_final_summary$measured_intensity - plot_final_summary$se
