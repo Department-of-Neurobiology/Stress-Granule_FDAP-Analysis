@@ -2,7 +2,7 @@
 ##Nataliya Trushina, 2020##
 ##Stress granule FDAP analysis##
 
-#Requirements: txt files from Nikon software with intensity measurements in the ROI after photoactivation.
+#Requirements: txt files from NIS Elements Software (Nikon) software with intensity measurements in the ROI after photoactivation.
 
 #Plot data without extrapolation and fitting
 #Plot biphasic exponential fits (also with data points - measured intensities in the ROI).
