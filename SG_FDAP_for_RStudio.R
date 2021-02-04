@@ -30,7 +30,7 @@ setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
 #######
 construct_name <- "G3BP1wt" #input the condition name (e.g., analyzed construct)
 subset_nrow <- 300 #input different value for easy subsetting by frame number (the number should not be longer than the shortest measurement acquisition!)
-input_type <- "NIS" #choose the analysis type, write "NIS" for NIS-elements output (different versions of the program might require small changes in file reading)
+input_type <- "FIJI" #choose the analysis type, write "NIS" for NIS-elements output (different versions of the program might require small changes in file reading)
 col_gradient <- colorRampPalette(c("#7CC17B", "#074c00")) #choose multiple colors for gradient
 
 #######
@@ -97,7 +97,7 @@ plot_Int_raw <- ggplot(long_plot_Int, aes(x = time, y = measured_intensity)) +
   scale_color_manual(values = cbp) +
   theme_classic() +
   theme(legend.title = element_blank(), legend.position = "none") +
-  ggtitle("Plot of raw data") +
+  ggtitle("Plot of raw data with background subtraction") +
   xlab("Time (s)") + 
   ylab("Intensity") +
   labs(color = "File name") +
