@@ -44,7 +44,7 @@ construct_name <- args[1] ##
 #Additional settings
 #######
 subset_nrow <-  as.numeric(args[2]) #input different value for easy subsetting by frame number (the number should not be longer than the shortest measurement acquisition!)
-input_type <- args[3] #choose the analysis type, write "NIS" for NIS-elements output (different versions of the programme might require small changes in file reading)
+input_type <- as.character(args[3]) #choose the analysis type, write "NIS" for NIS-elements output (different versions of the programme might require small changes in file reading)
 col_gradient <- colorRampPalette(c("#7CC17B", "#074c00")) #choose multiple colors for gradient
 
 #######
@@ -140,36 +140,13 @@ normdatapoints = list()
 #######
 #Loop through intensity measurement files, 
 # extract the background intensity, 
-# extrapolate the first datapoint,
+# extrapolate the first data point,
 # normalize,
 # try biphasic exponential decay fit,
 # if cannot be fitted - try monophasic exponential decay fit.
 #Plot successful fits separately.
 #Collect transformed data for further plotting.
 #######
-if (input_type == "NIS") {
-  #### FOR NIS OUTPUT
-  x <- read.table(i, sep = "\t", header = TRUE, fill = TRUE)
-  x <- x[!apply(x == "", 1, all),]
-  name <- gsub(".txt","",i)
-  print(name)
-  Int0_background <- x[,6][1]
-  x[,6] <- x[,6] - Int0_background
-  x <-x[1:subset_nrow,] #easy subsetting from additional settings
-  time <- 1:nrow(x) -1
-  y <- x[,6]
-} else {
-  #### FOR FIJI OUTPUT
-  x <- read.table(i, sep = ",", header = TRUE, fill = TRUE, row.names = "X")
-  name <- gsub("_RawIntDen1.csv","",i)
-  print(name)
-  Int0_background <- x$RawIntDen1[1] #the background intensity is in the value corresponding to the first
-  x$RawIntDen1 <- x$RawIntDen1 - Int0_background #substract the background intensity from all the values in the last column
-  x <- x[-c(1),] #delete the first row with zero value
-  x <-x[1:subset_nrow,] #easy subsetting
-  time <- 1:nrow(x) - 1
-  y <- x$RawIntDen1 
-}
 if (input_type == "NIS") {
   for (i in filenames){
     #### FOR NIS OUTPUT
@@ -188,7 +165,7 @@ if (input_type == "NIS") {
     str_1 <- as.data.frame(str_1)
     n <- nrow(str_1)
     data_to_fit_1 <- structure(list(x = str_1$time, y=str_1$y), class = "data.frame", row.names = c(NA, -n), .Names = c("x", "y"))
-    #try extrapolating the first datapoint
+    #try extrapolating the first data point
     result_1 <- try(fit_1 <- nlsLM(y ~ y0 + a1*exp(-x/b1) + a2*exp(-x/b2), data=data_to_fit_1, 
                                    control = list(maxiter = 100),
                                    lower=c(offset=0, a1=0, b1=0, a2=0, b2=0),
@@ -206,7 +183,7 @@ if (input_type == "NIS") {
       print(coef(fit_1))
       #plot fits for extrapolation check 
       jpeg(paste("jpeg_fits_extrapolation_check/",paste(paste(name,'extrapolation_check',sep="_"),"jpg",sep="."),sep=""))
-      plot(y~time, data = str_1, main ="Extrapolation parameters check", xlab = "Time (s)", ylab = "Intensity",ylim=c(0,max(x[,2])))
+      plot(y~time, data = str_1, main ="Extrapolation parameters check", xlab = "Time (s)", ylab = "Intensity",ylim=c(0,max(x[,6])))
       curve(predict(fit_1, newdata = data.frame(x)), col = "pink", add = TRUE)
       dev.off()
       
@@ -308,7 +285,7 @@ if (input_type == "NIS") {
     #### FOR FIJI OUTPUT
     x <- read.table(i, sep = ",", header = TRUE, fill = TRUE, row.names = "X")
     name <- gsub("_RawIntDen1.csv","",i)
-    print(name)
+    print(i)
     Int0_background <- x$RawIntDen1[1] #the background intensity is in the value corresponding to the first
     x$RawIntDen1 <- x$RawIntDen1 - Int0_background #substract the background intensity from all the values in the last column
     x <- x[-c(1),] #delete the first row with zero value
@@ -321,7 +298,7 @@ if (input_type == "NIS") {
     str_1 <- as.data.frame(str_1)
     n <- nrow(str_1)
     data_to_fit_1 <- structure(list(x = str_1$time, y=str_1$y), class = "data.frame", row.names = c(NA, -n), .Names = c("x", "y"))
-    #try extrapolating the first datapoint
+    #try extrapolating the first data point
     result_1 <- try(fit_1 <- nlsLM(y ~ y0 + a1*exp(-x/b1) + a2*exp(-x/b2), data=data_to_fit_1, 
                                    control = list(maxiter = 100),
                                    lower=c(offset=0, a1=0, b1=0, a2=0, b2=0),

@@ -25,15 +25,12 @@ library(RColorBrewer)
 #######
 setwd(dirname(rstudioapi::getActiveDocumentContext()$path)) 
 
-#INPUT THE CONDITION NAME (e.g., analyzed construct)
-getwd()
-construct_name <- "G3BP1wt"
-
 #######
 #Additional settings
 #######
-subset_nrow <- 112 #input different value for easy subsetting by frame number (the number should not be longer than the shortest measurement acquisition!)
-input_type <- "FIJI" #choose the analysis type, write "NIS" for NIS-elements output (different versions of the programme might require small changes in file reading)
+construct_name <- "G3BP1wt" #input the condition name (e.g., analyzed construct)
+subset_nrow <- 300 #input different value for easy subsetting by frame number (the number should not be longer than the shortest measurement acquisition!)
+input_type <- "NIS" #choose the analysis type, write "NIS" for NIS-elements output (different versions of the program might require small changes in file reading)
 col_gradient <- colorRampPalette(c("#7CC17B", "#074c00")) #choose multiple colors for gradient
 
 #######
@@ -129,36 +126,13 @@ normdatapoints = list()
 #######
 #Loop through intensity measurement files, 
 # extract the background intensity, 
-# extrapolate the first datapoint,
+# extrapolate the first data point,
 # normalize,
 # try biphasic exponential decay fit,
 # if cannot be fitted - try monophasic exponential decay fit.
 #Plot successful fits separately.
 #Collect transformed data for further plotting.
 #######
-if (input_type == "NIS") {
-  #### FOR NIS OUTPUT
-  x <- read.table(i, sep = "\t", header = TRUE, fill = TRUE)
-  x <- x[!apply(x == "", 1, all),]
-  name <- gsub(".txt","",i)
-  print(name)
-  Int0_background <- x[,6][1]
-  x[,6] <- x[,6] - Int0_background
-  x <-x[1:subset_nrow,] #easy subsetting from additional settings
-  time <- 1:nrow(x) -1
-  y <- x[,6]
-} else {
-  #### FOR FIJI OUTPUT
-  x <- read.table(i, sep = ",", header = TRUE, fill = TRUE, row.names = "X")
-  name <- gsub("_RawIntDen1.csv","",i)
-  print(name)
-  Int0_background <- x$RawIntDen1[1] #the background intensity is in the value corresponding to the first
-  x$RawIntDen1 <- x$RawIntDen1 - Int0_background #substract the background intensity from all the values in the last column
-  x <- x[-c(1),] #delete the first row with zero value
-  x <-x[1:subset_nrow,] #easy subsetting
-  time <- 1:nrow(x) - 1
-  y <- x$RawIntDen1 
-}
 if (input_type == "NIS") {
   for (i in filenames){
     #### FOR NIS OUTPUT
@@ -177,7 +151,7 @@ if (input_type == "NIS") {
     str_1 <- as.data.frame(str_1)
     n <- nrow(str_1)
     data_to_fit_1 <- structure(list(x = str_1$time, y=str_1$y), class = "data.frame", row.names = c(NA, -n), .Names = c("x", "y"))
-    #try extrapolating the first datapoint
+    #try extrapolating the first data point
     result_1 <- try(fit_1 <- nlsLM(y ~ y0 + a1*exp(-x/b1) + a2*exp(-x/b2), data=data_to_fit_1, 
                                    control = list(maxiter = 100),
                                    lower=c(offset=0, a1=0, b1=0, a2=0, b2=0),
@@ -195,7 +169,7 @@ if (input_type == "NIS") {
       print(coef(fit_1))
       #plot fits for extrapolation check 
       jpeg(paste("jpeg_fits_extrapolation_check/",paste(paste(name,'extrapolation_check',sep="_"),"jpg",sep="."),sep=""))
-      plot(y~time, data = str_1, main ="Extrapolation parameters check", xlab = "Time (s)", ylab = "Intensity",ylim=c(0,max(x[,2])))
+      plot(y~time, data = str_1, main ="Extrapolation parameters check", xlab = "Time (s)", ylab = "Intensity",ylim=c(0,max(x[,6])))
       curve(predict(fit_1, newdata = data.frame(x)), col = "pink", add = TRUE)
       dev.off()
       
@@ -310,7 +284,7 @@ if (input_type == "NIS") {
     str_1 <- as.data.frame(str_1)
     n <- nrow(str_1)
     data_to_fit_1 <- structure(list(x = str_1$time, y=str_1$y), class = "data.frame", row.names = c(NA, -n), .Names = c("x", "y"))
-    #try extrapolating the first datapoint
+    #try extrapolating the first data point
     result_1 <- try(fit_1 <- nlsLM(y ~ y0 + a1*exp(-x/b1) + a2*exp(-x/b2), data=data_to_fit_1, 
                                    control = list(maxiter = 100),
                                    lower=c(offset=0, a1=0, b1=0, a2=0, b2=0),
@@ -513,8 +487,8 @@ long_plot_Int_points$construct <- construct_name
 plot_final_summary <- summarySE(long_plot_Int_points, measurevar="measured_intensity", groupvars=c("construct","time"))
 plot_final_summary$CI_lower <- plot_final_summary$measured_intensity + plot_final_summary$se
 plot_final_summary$CI_upper <- plot_final_summary$measured_intensity - plot_final_summary$se
-write.table(plot_final_summary, paste("../../for_plotting_mean_and_se_", construct_name, ".csv", sep=""), sep = ";", row.names = FALSE)
-all_filenames_plot_together <- Sys.glob(file.path("../../for_plotting*"))
+write.table(plot_final_summary, paste("../for_plotting_mean_and_se_", construct_name, ".csv", sep=""), sep = ";", row.names = FALSE)
+all_filenames_plot_together <- Sys.glob(file.path("../for_plotting*"))
 data_merge <- data.frame()
 for (i in all_filenames_plot_together){  
   x <- read.table(i, sep = ";",header = TRUE)
@@ -533,10 +507,10 @@ plot_mult <- ggplot(data_merge, aes(x = time, y = measured_intensity)) +
   ylab("Normalized intensity") +
   scale_x_continuous(breaks=seq(0, 300, 10)) +
   scale_y_continuous(limits = c(0,1.1),breaks=seq(0, 1.1, 0.1))
-svg("../../mean_se.svg", width=5, height=3.5)
+svg("../mean_se.svg", width=5, height=3.5)
 plot_mult
 dev.off()
 p <- ggplotly(
   p = plot_mult
 )
-htmlwidgets::saveWidget(as_widget(p), paste("../../mean_se.html"))
+htmlwidgets::saveWidget(as_widget(p), paste("../mean_se.html"))
