@@ -36,13 +36,10 @@ library(Rmisc)
 library(plotly)
 library(RColorBrewer)
 
-#INPUT THE CONDITION NAME (e.g., analyzed construct)
-getwd()
-construct_name <- args[1] ##
-
 #######
 #Additional settings
 #######
+construct_name <- args[1] #input the condition name (e.g., analyzed construct)
 subset_nrow <-  as.numeric(args[2]) #input different value for easy subsetting by frame number (the number should not be longer than the shortest measurement acquisition!)
 input_type <- as.character(args[3]) #choose the analysis type, write "NIS" for NIS-elements output (different versions of the programme might require small changes in file reading)
 col_gradient <- colorRampPalette(c("#7CC17B", "#074c00")) #choose multiple colors for gradient
@@ -111,7 +108,7 @@ plot_Int_raw <- ggplot(long_plot_Int, aes(x = time, y = measured_intensity)) +
   scale_color_manual(values = cbp) +
   theme_classic() +
   theme(legend.title = element_blank(), legend.position = "none") +
-  ggtitle("Plot of raw data") +
+  ggtitle("Plot of raw data with background subtraction") +
   xlab("Time (s)") + 
   ylab("Intensity") +
   labs(color = "File name") +
