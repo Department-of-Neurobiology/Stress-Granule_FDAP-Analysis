@@ -3,8 +3,6 @@
 
 Created by Nataliya Trushina and Anna-Carina Soehnel
 
-> Why did it happen to us?
-
 * University of Osnabrück
 * Department of Neurobiology
 * Group of Prof. Dr. Roland Brandt
