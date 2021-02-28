@@ -146,8 +146,7 @@ if (input_type == "NIS") {
     time <- 1:nrow(x) -1
     y <- x[,6]
     
-    #### SAME FOR BOTH TYPES OF INPUT
-    str_1 <- cbind(time,y)[-c(1),]
+    str_1 <- cbind(time,y)[-c(1),] #delete the first row with zero values
     str_1 <- as.data.frame(str_1)
     n <- nrow(str_1)
     data_to_fit_1 <- structure(list(x = str_1$time, y=str_1$y), class = "data.frame", row.names = c(NA, -n), .Names = c("x", "y"))
@@ -274,13 +273,12 @@ if (input_type == "NIS") {
     print(name)
     Int0_background <- x$RawIntDen1[1] #the background intensity is in the value corresponding to the first
     x$RawIntDen1 <- x$RawIntDen1 - Int0_background #substract the background intensity from all the values in the last column
-    x <- x[-c(1),] #delete the first row with zero value
+
     x <-x[1:subset_nrow,] #easy subsetting
     time <- 1:nrow(x) - 1
     y <- x$RawIntDen1 
-    
-    #### SAME FOR BOTH TYPES OF INPUT
-    str_1 <- cbind(time,y)[-c(1),]
+   
+    str_1 <- cbind(time,y)[-c(1),] #delete the first row with zero values
     str_1 <- as.data.frame(str_1)
     n <- nrow(str_1)
     data_to_fit_1 <- structure(list(x = str_1$time, y=str_1$y), class = "data.frame", row.names = c(NA, -n), .Names = c("x", "y"))
